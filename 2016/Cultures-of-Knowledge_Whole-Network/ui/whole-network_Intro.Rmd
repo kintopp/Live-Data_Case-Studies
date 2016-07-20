@@ -1,0 +1,17 @@
+<p>
+The graph below shows the whole network and how it is interconnected. People are rendered in purple, organizations in green. The controls on the left allow you to search for a particular person or organization within the network and/or to select a date (range).
+</p>
+
+<p>
+The last name of a person is shown below their node; positioning the cursor over the node displays their full name. The thickness of an edge (i.e. the line between two nodes) represents the number of connections between two people or organisations. The controls on the left allow you to highlight and/or exclude a specific relationship type.
+</p>
+
+<p>
+Clicking on a node highlights the individuals or organizations directly connected to the selected individual reveals a box showing the number and type of unique connections as well as a table with all events involving the selected individual. In the network graph, you can only select one individual at a time. You can deselect by clicking in the empty space between the nodes.
+</p>
+
+<p>
+<strong>
+Hover your cursor over the controls for more information
+</strong>
+</p>

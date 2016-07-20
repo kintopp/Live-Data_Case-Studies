@@ -1,0 +1,122 @@
+---
+title: "ChipScene"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r libraries}
+library(visNetwork)
+library(igraph)
+library(scales)
+library(ForceAtlas2)
+```
+
+## Import Data
+
+```{r}
+import_nodes <- read.csv("MLP chipscene network markdown file.csv", stringsAsFactors = F)
+import_edges <- read.csv("MLP chipscene network [Edges].csv", stringsAsFactors = F)
+```
+
+## visNetwork
+
+visNetwork with igraphLayout
+
+```{r}
+visN_nodes <- data.frame(
+  "id" = import_nodes$Id,
+  "label" = import_nodes$Node.label,
+  "size" = rescale(import_nodes$r, to = c(5,40))
+)
+
+visN_edges <- data.frame(
+  "from" = import_edges$Source,
+  "to" = import_edges$Target
+)
+
+## It doesn't settle like this
+## visNetwork(edges = visN_edges, nodes = visN_nodes) 
+
+visNetwork(edges = visN_edges, nodes = visN_nodes) %>%
+  visIgraphLayout()
+```
+
+Make igraph object with default layout
+
+```{r}
+chipscene_igraph <- graph.data.frame(d = visN_edges, vertices = visN_nodes)
+# V(chipscene_igraph)$name <- visN_nodes$title
+plot(chipscene_igraph)
+```
+
+Coerce to visNetwork
+
+```{r}
+visIgraph(chipscene_igraph, idToLabel = F, randomSeed = 1) %>%
+  visOptions(highlightNearest = T)
+```
+
+## forceAtlas2
+
+The `ForceAtlas2` library provides the Force Atlas 2 layout algorithm, the `layout.forceatlas2` function is very mouthy and difficult to suppress it's output (it shows vertex coordinate evolution as the function is iterated). To prevent the output the code chunk has been provided the option `include = FALSE` and a non-interpreted code chunk is given below instead:
+
+```{r, eval = F}
+capture.output(forceatlas_layout <- layout.forceatlas2(graph = chipscene_igraph, iterations = 400))
+```
+
+```{r, include=FALSE}
+capture.output(forceatlas_layout <- layout.forceatlas2(graph = chipscene_igraph, iterations = 400))
+```
+
+```{r}
+plot(chipscene_igraph, layout = forceatlas_layout)
+```
+
+
+Coerce to visNetwork, adding some additional iterations to the algorithm:
+
+```{r, eval=F}
+invisible(
+  visN <-
+    visIgraph(
+      chipscene_igraph,
+      idToLabel = F,
+      layout = "layout.forceatlas2",
+      directed = TRUE,
+      iterations = 800,
+      randomSeed = 1
+    ) %>%
+    visOptions(highlightNearest = T)
+)
+```
+
+
+```{r, include=FALSE}
+invisible(
+  visN <-
+    visIgraph(
+      chipscene_igraph,
+      idToLabel = F,
+      layout = "layout.forceatlas2",
+      directed = TRUE,
+      iterations = 800,
+      randomSeed = 1
+    ) %>%
+    visOptions(highlightNearest = T)
+)
+```
+
+```{r}
+visN
+```
+
+
+
+

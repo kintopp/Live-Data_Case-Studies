@@ -1,0 +1,259 @@
+---
+title: "Shapefile Tally fo Choropleth"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(maps)
+library(mapproj)
+library(leaflet)
+library(rgdal)
+library(GISTools)
+library(sp)
+```
+
+
+## Shape Files
+
+
+```{r}
+## Load county borders
+full_us_shapefiles <- readOGR(dsn = "data/shapefiles/", layer = "cb_2015_us_county_5m", verbose = F)
+## Convert FIPS code to numeric
+full_us_shapefiles$STATEFP <- as.character(full_us_shapefiles$STATEFP)
+full_us_shapefiles$STATEFP <- as.numeric(full_us_shapefiles$STATEFP)
+
+
+  
+us_state_shapefiles <- readOGR(dsn = "data/shapefiles", layer = "cb_2015_us_state_5m", verbose = F)
+## Convert FIPS code to numeric
+us_state_shapefiles$STATEFP <- as.character(us_state_shapefiles$STATEFP)
+us_state_shapefiles$STATEFP <- as.numeric(us_state_shapefiles$STATEFP)
+```
+
+Access only contiguous US?
+
+```{r}
+
+make_us_contiguous <- function(spatial_polgyon= NA){
+  fips_codes <- read.csv("data/US-FIPS-Codes.csv")
+  contiguous_fips_codes <- fips_codes[fips_codes$Contiguous.United.States. == "Y",]$STATE
+  contiguous <- spatial_polgyon[spatial_polgyon$STATEFP %in% contiguous_fips_codes,]
+  # Drop unnecessary levels
+  contiguous@data <- droplevels(contiguous@data)
+  contiguous
+}
+
+contiguous_us_shapefiles <- make_us_contiguous(full_us_shapefiles)
+us_state_shapefiles <- make_us_contiguous(us_state_shapefiles)
+```
+
+Export the contiguous files for re-use?
+
+```{r}
+
+writeSpatialShape(us_state_shapefiles, "data/shapefiles/contiguous_states")
+writeSpatialShape(contiguous_us_shapefiles, "data/shapefiles/contiguous_congressional_districts")
+writeSpatialShape(contiguous_us_shapefiles, "data/shapefiles/contiguous_counties")
+
+imported_states <- readOGR(dsn = "data/shapefiles/", layer = "contiguous_states", verbose = F)
+
+```
+
+
+```{r}
+map <- leaflet(data = contiguous_us_shapefiles) %>% addTiles()
+map %>% addPolygons(
+  stroke = TRUE,
+  color = "#fff",
+  # fillOpacity = 0.8,
+  # fillColor = ~ pal(var),
+  weight = 1
+)
+
+
+map <- leaflet(data = imported_states) %>% addTiles()
+map %>% addPolygons(
+  stroke = TRUE,
+  smoothFactor = 0.2,
+  fillOpacity = 0.8,
+  # fillColor = ~ pal(var),
+  weight = 1
+)
+```
+
+
+## Locaiton Data
+
+```{r}
+just_send_points <- letters_sent_from_usa[,c("Sender.Location.GIS.Longitude", "Sender.Location.GIS.Latitude")]
+colnames(just_send_points) <- c("longitude","latitude")
+
+send_location_spdf <- SpatialPointsDataFrame(coords = just_send_points,
+                                         data = just_send_points,
+                                         proj4string = full_us_shapefiles@proj4string)
+
+```
+
+## Tally
+
+The dataframe below contains counts per polygon, note they're ordered from 0-440
+
+```{r}
+## Example http://gis.stackexchange.com/a/113009
+## Apply to my data!
+
+system.time(data.frame(poly.counts(pts = send_location_spdf, polys = contiguous_us_shapefiles)))
+
+contiguous_counts = poly.counts(pts = send_location_spdf, polys = contiguous_us_shapefiles)
+contiguous_counts_df = data.frame(contiguous_counts)
+contiguous_us_shapefiles@data$Count.of.Send.Locations <- contiguous_counts_df$contiguous_counts
+```
+
+
+
+Make as a chloropleth, but it's clear the counts per location is not working correctly:
+
+```{r}
+
+var <- contiguous_us_shapefiles$Count.of.Send.Locations
+var[var == 0] <- NA
+palette <- colorNumeric(palette = "YlGnBu", domain = var)
+
+map <- leaflet(data = contiguous_us_shapefiles) %>% addTiles()
+
+map %>% addPolygons(
+    stroke = FALSE,
+    smoothFactor = 0.2,
+    fillOpacity = 0.8,
+    fillColor = ~palette(var),
+    weight = 1,
+    popup = ~as.character(var)
+  )
+
+```
+
+
+### Playing with Map asthetics
+
+```{r color_palette}
+
+var <- contiguous_us_shapefiles$Count.of.Send.Locations
+var[var == 0] <- NA
+
+brewer_palettete <- brewer.pal(7, "Blues")
+brewer_palettete
+
+palette <- colorBin(c(NA,brewer.pal(7, "Blues")), 
+                     bins = c(0,1, 10, 20, 30, 40, 50, 100, 1000),
+                    na.color = NA)
+
+
+sort(unique(var))
+
+palette <- colorBin(brewer.pal(5, "YlGnBu")[2:5], 
+                    c(1,10,20, 50, 100,1000),
+                    na.color = brewer.pal(5, "YlGnBu")[1],
+                    alpha = TRUE
+                    )
+
+brewer.pal(5, "YlGnBu")[2:5]
+
+
+palette(var)
+
+dput(palette(var))
+```
+
+
+```{r}
+
+palette <- colorBin(brewer.pal(5, "YlGnBu")[2:5], 
+                    bins = c(1,5,10,20,50,300),
+                    pretty = FALSE,
+                    na.color = brewer.pal(5, "YlGnBu")[1],
+                    alpha = TRUE
+                    )
+
+palette <- colorBin(brewer.pal(5, "YlGnBu"), 
+                    bins = c(1,5,10,20,50,300),
+                    pretty = FALSE,
+                    na.color = "#FFFFFF",
+                    alpha = TRUE
+                    )
+
+map <- leaflet(data = contiguous_us_shapefiles) %>% addProviderTiles("Hydda.Base")
+map <- map %>% addPolygons(
+    stroke = TRUE,
+    color = "#FFFFFF",
+    smoothFactor = 0.2,
+    fillOpacity = 0.8,
+    fillColor = ~palette(var),
+    weight = 1,
+    popup = ~as.character(var)
+  )
+map
+
+
+map %>% addPolygons(
+  data = us_state_shapefiles,
+    stroke = TRUE,
+    color = "#000000",
+    smoothFactor = 0.2,
+    weight = 1,
+  fill = FALSE 
+  )
+
+map %>% addLegend(position = 'topleft', ## choose bottomleft, bottomright, topleft or topright
+          colors = brewer.pal(5, "YlGnBu"),
+          labels = c("0","1-5","5-10","10-20","20-1000"),  ## legend labels (only min and max)
+          opacity = 0.6,      ##transparency again
+          title = "relative<br>amount")   ## title of the legend
+
+```
+
+
+Make it faster
+
+
+## sp over
+
+```{r}
+palette <- colorBin(c("#cccccc",brewer.pal(5, "YlGnBu")), 
+                    bins = c(0,1,5,10,20,50,350),
+                    pretty = FALSE,
+                    # na.color = "#cccccc",
+                    alpha = TRUE
+                    )
+
+over_output <- over(as(contiguous_us_shapefiles,"SpatialPolygons"),
+                    as(send_location_spdf,"SpatialPoints"), 
+                    fn = mean,
+                    returnList = T)
+
+points_per_polygon_from_over <- data.frame(
+  "polygon_id" = names(over_output),
+  "count" = as.vector(unlist(lapply(over_output, function(x) length(x))))
+)
+
+contiguous_us_shapefiles$count.from.over <- points_per_polygon_from_over$count
+
+
+map <- leaflet(data = contiguous_us_shapefiles) %>% addTiles()
+map %>% addPolygons(
+    stroke = TRUE,
+    smoothFactor = 0.2,
+    fillOpacity = 0.8,
+    fillColor = ~palette(count.from.over),
+    weight = 1,
+    popup = ~as.character(count.from.over)
+  )
+
+```
+
+
+

@@ -1,0 +1,44 @@
+---
+title: "Live Data 2016 Case Studies"
+author: "Martin John Hadley"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: false
+    code_folding: show
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(htmltools)
+```
+
+# What are Live Data Case Studies?
+
+Our goal is simple - provide interactive data visualisation as a service to researchers and academic-related staff at Oxford University.
+
+To achieve this IT Services funded a project called "Live Data" to work on a number of casr
+
+# Maps
+
+These case studies have maps
+
+## Example 1
+
+Some text
+
+## Example 2
+
+Some text
+
+# Charts
+
+Some text here
+
+## Example 1
+
+Some text
+
+## Example 2
+
+Some text

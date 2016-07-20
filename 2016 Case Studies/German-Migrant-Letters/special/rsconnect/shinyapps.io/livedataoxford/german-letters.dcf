@@ -1,8 +1,0 @@
-name: german-letters
-account: livedataoxford
-server: shinyapps.io
-bundleId: 345911
-url: https://livedataoxford.shinyapps.io/german-letters/
-when: 1452265973.69363
-asMultiple: FALSE
-asStatic: FALSE

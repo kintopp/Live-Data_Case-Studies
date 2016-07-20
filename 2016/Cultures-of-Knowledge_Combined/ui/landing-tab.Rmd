@@ -1,0 +1,12 @@
+<!---=======================================================================--->
+<center><h2>Proof-of-Concept Visualizations of the Prosopographical Network of Samuel Hartlib</h2></center>
+<!---=======================================================================--->
+
+<br><br>
+
+This application contains two proof-of-concept prosopographical network visualizations created in 2016 by a collaboration of the IT Services of the University of Oxford and the ‘Cultures of Knowledge’ project based at Oxford’s History Faculty. These visualizations provide two approaches for examining a representative part of the network of the ‘intelligencer’ Samuel Hartlib (c.1600–1662) and for analyzing the composition and structure of the network, the various relationships between its members, and the roles played by individuals and institutions.
+
+<br>
+
+The modules were built by Martin Hadley, data scientist in the <a href="http://blogs.it.ox.ac.uk/acit-rs-team">Academic IT Research Support team</a>, using <a href=http://shiny.rstudio.com>Shiny</a>, RStudio’s interactive web application framework based on the programming language R. The visualizations were designed by the ‘Cultures of Knowledge’ Project Director Howard Hotson, Digital Project Manager Arno Bosse and Postdoctoral Research Fellow Robin Buning.
+

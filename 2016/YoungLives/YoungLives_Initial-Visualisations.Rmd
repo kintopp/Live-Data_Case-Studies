@@ -1,0 +1,46 @@
+---
+title: "Young Lives - Initial Visualisations"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+# Import data
+
+The data has been normalised manually into one table and imported as follows:
+
+```{r import_data}
+library(xlsx)
+ethopia_schooling_youngOld <- read.csv(file = "data/ethopia_education_schooling_young-old-comparison.csv")
+```
+
+# Basic Visualisations
+
+This is a very simple plotly visualisation of the percentage of students in school across the different regions of Ethiopia:
+
+```{r plotly_region_comparison}
+
+ethopia_schooling_region <- ethopia_schooling_youngOld[ethopia_schooling_youngOld$Property.Type == "schooling region",]
+
+library(plotly)
+
+plot_ly(data = ethopia_schooling_region,
+        type = "bar",
+        x = Property,
+        y = percentage.in.school,
+        group = Cohort) %>%
+  layout(xaxis = list(title = ""),
+         yaxis = list(title = "Percentage in School"))
+```
+
+I built a small Shiny app for pivoting throught the data, embedded below:
+
+<iframe src="https://livedataoxford.shinyapps.io/YoungLives/" width = "100%" height = "600px"></iframe>
+
+

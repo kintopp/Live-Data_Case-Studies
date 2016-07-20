@@ -1,0 +1,81 @@
+---
+title: "Mireia Timeline"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r import_data}
+xlsx_convert_import <- function(inputFile = NA, outputFile = NA){
+  if(file.exists(outputFile)){
+    imported_data <<- read.csv(outputFile)
+  } else {
+    library(xlsx)
+    xlsx_import <- read.xlsx(inputFile, sheetIndex = 1)
+    write.csv(xlsx_import, file = outputFile, row.names = FALSE)
+    remove(xlsx_import)
+    imported_data <<- read.csv(outputFile)
+  }
+}
+imported_timeline_data <- xlsx_convert_import(inputFile = "timeline_data.xlsx", outputFile = "timeline_data.csv")
+```
+
+```{r clean_data}
+timeline_data <- imported_timeline_data
+timeline_data$Valid.From <- as.Date(timeline_data$Valid.From)
+timeline_data$Valid.To <- as.Date(timeline_data$Valid.To)
+str(timeline_data)
+```
+
+## Overall Policy Validity Period
+
+The chart below provides an overview of the periods over which policy was valid, split by "Name of Policy" and coloured by "Type of Policy"
+
+```{r}
+library(ggplot2)
+ggplot(timeline_data, aes(x=Valid.From, xend=Valid.To, y=Name.of.Policy, yend=Name.of.Policy, colour=Type)) +
+         geom_segment(size=3) + 
+  xlab("Date") + ylab("Name of Policy")
+```
+
+This is an interactive version of the above:
+
+```{r, message=FALSE, warning=FALSE}
+library(plotly)
+ggplotly(ggplot(timeline_data, aes(x=Valid.From, xend=Valid.To, y=Name.of.Policy, yend=Name.of.Policy, colour=Type)) +
+         geom_segment(size=3) + 
+  xlab("Date") + ylab("Name of Policy"))
+```
+
+
+<!-- ## Shiny App -->
+
+<!-- ```{r} -->
+<!-- library(shiny) -->
+
+<!-- ``` -->
+
+
+<!-- # Highchart -->
+
+<!-- ```{r} -->
+<!-- library(highcharter) -->
+
+<!-- highchart() %>% -->
+<!--   hc_chart(type = "columnrange", inverted = TRUE) %>% -->
+<!--   hc_xAxis(categories = timeline_data$Name.of.Policy) %>% -->
+<!--   hc_add_series(data = ) -->
+
+<!-- ``` -->
+
+
+
+
+
+
+
+
+
+

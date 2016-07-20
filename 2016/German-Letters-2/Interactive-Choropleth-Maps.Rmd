@@ -1,0 +1,103 @@
+---
+title: "Interactive Choropleth Maps"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+# Choropeths Maps vs Dasymetric Maps
+
+These maps both allow for pre-defined areas to be colored according to either discreet or continuous variables, however dasymetric maps are better suited to continuous variables with a defiend "zero" or "unknown" value.
+
+See the image on https://en.wikipedia.org/wiki/Dasymetric_map
+
+This section of the document includes a variety of options for combining choropleths with "geoscatter" charts
+
+## Plotly
+
+The map below is a plotly chart with a `scattergeo` chart showing individual locations and a `choropleth` overlay, note the following features:
+
+- Point and state-level data are uncorrelated, these are example datasets
+- White states have fewer than 1000 exports to their name
+- Hover text is shown at the state and point level
+- Choropleth always have scale bar legends, we can't add "1-20", "20 - 40" and "zero" graduation
+
+```{r ploty_choropleth_basic}
+library(plotly)
+points.df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2011_february_us_airport_traffic.csv')
+states.df <-  read.csv("https://raw.githubusercontent.com/plotly/datasets/master/2011_us_ag_exports.csv")
+## Delete states with fewer than 1000 exports
+states.df <- states.df[!states.df$total.exports < 1000,]
+
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = "999999",
+  showsubunits = TRUE,
+  subunitcolor = toRGB("black")
+)
+
+# give state boundaries a black border
+l <- list(color = toRGB("black"), width = 2)
+plot_ly(
+  data = points.df,
+  lat = lat,
+  lon = long,
+  color = cnt,
+  type = 'scattergeo',
+  locationmode = 'USA-states',
+  marker = list(size = 4),
+  showlegend = FALSE,
+  inherit = FALSE
+  ) %>% add_trace(
+  data = states.df,
+  z = total.exports,
+  autocolorscale = TRUE,
+  locations = code,
+  type = 'choropleth',
+  locationmode = 'USA-states',
+  color = total.exports,
+  # colors = 'Blues',
+  marker = list(line = l),
+  colorbar = list(title = "Number of Letters", tickmode = "auto")
+  ) %>% layout(title = 'Letters sent by German Migrants in the USA', geo = g)
+
+```
+
+
+# Unique Shape Files
+
+It is not possible to use unique shape files with plotly, however a number of alternative libraries exist which would allow us to use historic shape files in visualisations to show the changing shape of the German Empire and country borders. This work would be outside of the remit of the Live Data project but could be achieved on a recharge-like basis.
+
+The following examples use the German Empire shape files for 1884 as provided by: MPIDR [Max Planck Institute for Demographic Research] and CGG [Chair for Geodesy and Geoinformatics, University of Rostock] 2011: MPIDR Population History GIS Collection (partly based on Hubatsch and Klein 1975 ff.) – Rostock.
+Hubatsch, W. and T. Klein (eds.) 1975 ff.: Grundriß der deutschen Verwaltungsgeschichte – Marburg.
+
+## Library: leaflet
+
+The [leaflet](rstudio.github.io/leaflet/) library allows us to use the popular leaflet JavaScript library for interactive mapping, as demonstrated in this example.
+
+Note that data is taken from the following sources:
+
+- MPIDR [Max Planck Institute for Demographic Research] and CGG [Chair for Geodesy and Geoinformatics, University of Rostock] 2011: MPIDR Population History GIS Collection (partly based on Hubatsch and Klein 1975 ff.) – Rostock.
+
+- Hubatsch, W. and T. Klein (eds.) 1975 ff.: Grundriß der deutschen Verwaltungsgeschichte – Marburg.
+
+```{r leaflet_german_empire_1884}
+library(rgdal)
+library(leaflet)
+germany_empire_1884 <- readOGR(dsn = "./Germany-Shape-Files", layer = "German_Empire_1884_Stat_v.1.0", verbose = FALSE)
+## Convert projection as detailed here http://stackoverflow.com/a/33347534/1659890
+projection <- sp::CRS('+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0')
+germany_empire_1884 <- sp::spTransform(germany_empire_1884,projection)
+leaflet() %>% addTiles() %>% addPolygons(data = germany_empire_1884, weight = .5) %>% addProviderTiles("CartoDB.Positron")
+```
+
+
+

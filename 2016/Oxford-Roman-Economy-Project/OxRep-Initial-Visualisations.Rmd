@@ -1,0 +1,118 @@
+---
+title: "OxRep Initial Viz"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r packages}
+library(maps)
+library(mapproj)
+library(leaflet)
+library(rgdal)
+library(GISTools)
+library(sp)
+library(plyr)
+library(ggplot2)
+library(ggmap)
+```
+
+# OxRep Visualisations
+
+This is a set of quick and dirty visualisations for the OxRep project
+
+# Aqueducts
+
+A map of Roman aqueducts was accessed from http://awmc.unc.edu/wordpress/map-files/ and imported into R as follows:
+
+```{r}
+aqueducts <- readOGR(dsn = "data/shapefiles/", layer = "aqueducts", verbose = F)
+```
+
+An interactive map of the aqueducts can be easily created as follows, note that clicking on the aqueducts will provide popup information.
+
+```{r}
+aqueduct_labeller <- function(Name = NA, Source = NA, SHAPE_Leng = NA) {
+    paste0(# "<p>", Name, "</p>",
+      "<p>Name: ", Name, "</p>",
+      "<p>Source: ", Source, "</p>",
+      "<p>Length: ", SHAPE_Leng, "</p>")
+  }
+map <- leaflet(data = aqueducts) %>% addTiles()
+map %>% addPolylines(
+  popup = ~aqueduct_labeller(Name, Source, SHAPE_Leng)
+)
+```
+
+# Roman Road Network
+
+I've attempted to visualise the Roman Road Network [1] but have not yet succeeded in correctly formatting the data for display.
+
+[1] - M McCormick et al. 2013 - Roman Road Network (version 2008) [Shapefile], http://darmc.harvard.edu/icb/icb.do?keyword=k40248&pageid=icb.page601659.
+
+```{r}
+## Load county borders
+roman_roads_shapefile <- readOGR(dsn = "data/shapefiles/", layer = "roman_roads_v2008", verbose = F)
+map <- leaflet(data = roman_roads_shapefile) %>% addTiles()
+map %>% addPolygons(
+  stroke = FALSE,
+  smoothFactor = 0.2,
+  fillOpacity = 0.8,
+  # fillColor = ~ pal(var),
+  weight = 1
+)
+```
+
+# OxRep Locations
+
+```{r}
+imported_locations <- read.csv("data/Current OxREP database/locations.csv", stringsAsFactors = F)
+oxrep_locations <- imported_locations
+## Drop locations at (0,0)
+oxrep_locations <- oxrep_locations[oxrep_locations$loclat != 0 & oxrep_locations$loclong != 0,]
+
+oxrep_locations <- oxrep_locations[!is.na(oxrep_locations$loclat) | !is.na(oxrep_locations$loclong),]
+
+```
+
+There are `r nrow(imported_locations[imported_locations$loclat == 0 & imported_locations$loclong == 0,])` locations at coordinates (0,0) which I assume to be nonsense data and so have removed this from the analysis. There are also `r imported_locations[is.na(imported_locations$loclat) | is.na(imported_locations$loclong),] %>% nrow()` rows with NA in the longitude or latitude columns, these have been removed - leaving `r nrow(oxrep_locations)` data points in the dataset.
+
+```{r}
+spdf <- SpatialPointsDataFrame(coords = oxrep_locations[,c("loclong", "loclat")], data = oxrep_locations)
+
+oxrep_labeller <- function(locname = NA, loccrdcomment = NA) {
+    paste0(# "<p>", Name, "</p>",
+      "<p>locname: ", locname, "</p>",
+      "<p>loccrdcomment: ", loccrdcomment, "</p>")
+  }
+
+map <- leaflet(data = spdf) %>% addTiles()
+map %>% addCircles(
+  popup = ~oxrep_labeller(locname, loccrdcomment)
+)
+
+```
+
+
+## Shipwrecks
+
+```{r}
+data.frame(
+  "Name" = "locname",
+  "Date Range" = paste0("from",post_0,"to",ante_0),
+  
+)
+```
+
+Switch between terrain and areas...
+
+
+
+
+

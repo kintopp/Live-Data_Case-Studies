@@ -1,0 +1,314 @@
+---
+title: "WebLearn_Colourful"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r load_libraries}
+library(plyr)
+library(igraph)
+library(visNetwork)
+library(htmltools)
+library(RColorBrewer)
+```
+
+
+## Import data and set colours
+
+Import data:
+
+```{r import_data, eval=T}
+
+xlsx_convert_import <- function(inputFile = NA, outputFile = NA, stringsAsFactors = NA){
+  if(file.exists(outputFile)){
+    imported_data <<- read.csv(outputFile, stringsAsFactors = stringsAsFactors)
+  } else {
+    library(xlsx)
+    xlsx_import <- read.xlsx(inputFile, sheetIndex = 1)
+    write.csv(xlsx_import, file = outputFile, row.names = FALSE)
+    remove(xlsx_import)
+    imported_data <<- read.csv(outputFile, stringsAsFactors = stringsAsFactors)
+  }
+}
+weblearn_edges <- xlsx_convert_import(inputFile = "structure.xlsx", outputFile = "structure.csv", stringsAsFactors = FALSE)
+weblearn_nodes <- xlsx_convert_import(inputFile = "nodes.xlsx", outputFile = "nodes.csv", stringsAsFactors = FALSE)
+# weblearn_supercategories <- xlsx_convert_import(inputFile = "SuperCategories.xlsx", outputFile = "SuperCategories.csv", stringsAsFactors = FALSE)
+
+# weblearn_supercategories
+# 
+# unique_supercategories <- unique(weblearn_supercategories$Super.Category)
+# 
+# 
+# brewer.pal(length(unique(weblearn_supercategories$Super.Category)), "Set1")
+# 
+# 
+
+## Colours
+colour_vector <- brewer.pal(length(unique(weblearn_nodes$color)), "Set1")
+colour_rules <- data.frame(
+  "Category" = unique(weblearn_nodes$color),
+  "Colour" = colour_vector,
+  stringsAsFactors = F
+)
+
+```
+
+
+## Coloured and Sizes Nodes
+
+In the network below the size of nodes is scaled by the node rank, and coloured according to the department the site belongs to:
+
+```{r sizes}
+# The string "n/a" represents WISE and should be the largest node.
+# There are too few sizes provided to give a useful indication of how sizing works, so let's use hierachy to decide size.
+
+xavier_igraph <- graph.data.frame(weblearn_edges, vertices = weblearn_nodes$Node.id)
+
+## Calculate rank http://stackoverflow.com/a/36554882/1659890
+node_size_list <- as.numeric(shortest.paths(xavier_igraph)[,'Wise']+1)
+## Rescale from small to big
+node_size_list <- 11*{max(node_size_list)/node_size_list}
+```
+
+```{r visNetwork_1}
+
+shape_rules <- data.frame(
+  "Category" = c("Information", "landing", "LectureCapture", "staff", "teaching", "tutor",NA),
+  "Shape" = c("square", "triangle", "box", "circle", "diamond", "star","dot"),
+  stringsAsFactors = F
+)
+
+visN_nodes <- data.frame(
+  "id" = as.character(weblearn_nodes$Node.id),
+  "label" = weblearn_nodes$Name,
+  "title" = paste0(
+    "<p>Name: ",weblearn_nodes$Name,"</p>",
+    "<p>","Lesson Tools Info",weblearn_nodes$Lesson.tools.info,"</p>"
+  ),
+  "group" = as.character(weblearn_nodes$color),
+  "color" = mapvalues(as.character(weblearn_nodes$color), colour_rules$Category, colour_rules$Colour),
+  # "shape" = mapvalues(as.character(weblearn_nodes$shape), shape_rules$Category, shape_rules$Shape),
+  "size" = node_size_list
+)
+
+visN_edges <- data.frame(
+  "from" = as.character(weblearn_edges$Parent),
+  "to" = as.character(weblearn_edges$Child)
+)
+
+visNetwork(nodes = visN_nodes, edges = visN_edges, width = "100%", height = "500px") %>%
+  visOptions(highlightNearest = TRUE) %>%
+  visInteraction(hoverConnectedEdges = TRUE) %>%
+  visLayout(improvedLayout = T, randomSeed = 1) %>%
+  # visIgraphLayout(layout = "layout_components") %>%
+  # visIgraphLayout() %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[1], color = colour_vector[1]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[2], color = colour_vector[2]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[3], color = colour_vector[3]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[4], color = colour_vector[4]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[5], color = colour_vector[5])
+```
+
+```{r colour_legend_1, echo=FALSE}
+
+semi_circle_column <- function(width, colour){
+  paste0(
+    '<div class="col-md-',width,'">',
+    '<center>',
+    '<svg height="50" width="100">
+  <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill=',colour,' />
+</svg>',
+    '</center>',
+    '</div>'
+  )
+}
+
+semi_circle_label_column <- function(width, label){
+  paste0(
+    '<div class="col-md-',width,'">',
+    '<center>',
+    label,
+    '</center>',
+    '</div>'
+  )
+}
+
+colour_legend <- HTML(
+  paste0(
+  '<div class="row">',
+  paste0(unlist(lapply(colour_vector, function(colour) semi_circle_column(2, colour))),collapse = ''),
+  '</div>',
+    '<div class="row">',
+  paste0(unlist(lapply(colour_rules$Category, function(category) semi_circle_label_column(2, category))),collapse = ''),
+  '</div>'
+))
+
+colour_legend
+
+```
+
+## Shapes and Colours
+
+In the network below the shape of nodes is set by the node type, and coloured according to the department the site belongs to:
+
+
+```{r shapes, eval=T}
+
+rectangle_svg <- '<svg width="100%" height="50" viewBox="0 0 20 10" display="block" margin="auto">
+    <polygon fill=grey stroke-width=0 
+             points="0,10 0,0, 10,0 10,10" />
+</svg>'
+
+triangle_svg <- '<svg width="100%" height="50" viewBox="0 0 20 10">
+    <polygon fill=grey stroke-width=0 
+             points="0,10 5,0 10,10" />
+</svg>'
+
+diamond_svg <- '<svg width="100%" height="50" viewBox="0 0 20 10">
+    <polygon fill=grey stroke-width=0 
+             points="5,10 0,5 5,0, 10,5" />
+</svg>'
+
+
+star_svg <- '<svg width="100%" height="50" viewBox="231 75 469 215">
+    <polygon fill=grey stroke-width=0 
+             points="350,75  379,161 469,161 397,215
+                    423,301 350,250 277,301 303,215
+                    231,161 321,161" />
+</svg>'
+
+
+shape_row <- function(shape, shape_name){
+  paste0(
+    '<div class="row" >',
+   '<div class="col-md-6 col-centered">',
+    shape,
+    '</div>',
+   '<div class="col-md-6 col-centered">',
+   shape_name,
+'</div>',
+'</div>'
+  )
+}
+
+shape_rules <- data.frame(
+  "Category" = c("Information", "landing", "LectureCapture", "staff", "teaching", "tutor",NA),
+  "Shape" = c("square", "triangle", "box", "circle", "diamond", "star","dot"),
+  stringsAsFactors = F
+)
+
+shapes_legend <- paste0(
+  '<div class="row" >',
+  shape_row(rectangle_svg, "Information"),
+  shape_row(triangle_svg, "landing"),
+  shape_row(diamond_svg, "LectureCapture"),
+  shape_row(star_svg, "tutor"),
+  '</div>'
+  )
+```
+
+New Shape Legend Below
+
+```{r new_shape_legend}
+
+HTML(paste0(
+    '<div class="row">',
+    '<div class="col-md-3 col-centered">',
+    '<center>',
+    rectangle_svg,
+    "Information",
+    '</center>',
+    '</div>',
+    '<div class="col-md-3 col-centered">',
+    '<center>',
+    triangle_svg,
+    "landing",
+    '<center>',
+    '</div>',
+    '<div class="col-md-3 col-centered">',
+    '<center>',
+    diamond_svg,
+    "LectureCapture",
+    '<center>',
+    '</div>',
+    '<div class="col-md-3 col-centered">',
+    '<center>',
+    star_svg,
+    "tutor",
+    '<center>',
+    '</div>',
+    '</div>'
+))
+
+```
+
+```{r visNetwork_2}
+shape_rules <- data.frame(
+  "Category" = c("Information", "landing", "LectureCapture", "staff", "teaching", "tutor",NA),
+  "Shape" = c("square", "triangle", "box", "circle", "diamond", "star","dot"),
+  stringsAsFactors = F
+)
+
+visN_nodes <- data.frame(
+  "id" = as.character(weblearn_nodes$Node.id),
+  "label" = weblearn_nodes$Name,
+  "title" = paste0(
+    "<p>Name: ",weblearn_nodes$Name,"</p>",
+    "<p>","Lesson Tools Info",weblearn_nodes$Lesson.tools.info,"</p>"
+  ),
+  "group" = as.character(weblearn_nodes$color),
+  "color" = mapvalues(as.character(weblearn_nodes$color), colour_rules$Category, colour_rules$Colour),
+  "shape" = mapvalues(as.character(weblearn_nodes$shape), shape_rules$Category, shape_rules$Shape)
+  # "size" = node_size_list
+)
+
+visN_edges <- data.frame(
+  "from" = as.character(weblearn_edges$Parent),
+  "to" = as.character(weblearn_edges$Child)
+)
+
+visNetwork_shapes_and_colours <- visNetwork(nodes = visN_nodes, edges = visN_edges, width = "100%", height = "500px") %>%
+  visOptions(highlightNearest = TRUE) %>%
+  visInteraction(hoverConnectedEdges = TRUE) %>%
+  # visIgraphLayout(layout = "layout_components") %>%
+  visLayout(improvedLayout = T, randomSeed = 1) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[1], color = colour_vector[1]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[2], color = colour_vector[2]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[3], color = colour_vector[3]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[4], color = colour_vector[4]) %>%
+  visGroups(groupname = unique(weblearn_nodes$color)[5], color = colour_vector[5])
+  # visGroups(groupname = levels(weblearn_nodes$color)[6], color = colour_vector[6])
+
+visNetwork_shapes_and_colours
+
+# visSave(visNetwork_shapes_and_colours, file = "visNetwork_shapes_and_colours.html")
+# 
+# HTML(
+#     paste0('<div class="row" >',
+#    '<div class="col-md-2 col-centered">',
+#    shapes_legend,
+#    '</div>',
+#    '<div class="col-md-10 col-centered">',
+#    includeHTML("visNetwork_shapes_and_colours.html"),
+#    '</div>',
+#    '</div>'
+# ))
+
+
+  # visLegend()
+```
+
+```{r colour_legend_2}
+colour_legend
+```
+
+
+
+

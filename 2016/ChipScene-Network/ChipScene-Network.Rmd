@@ -1,0 +1,72 @@
+---
+title: "Chipscene Network"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r libraries}
+library(visNetwork)
+library(igraph)
+library(scales)
+library(ForceAtlas2)
+import_nodes <- read.csv("MLP chipscene network markdown file.csv", stringsAsFactors = F)
+import_edges <- read.csv("MLP chipscene network [Edges].csv", stringsAsFactors = F)
+visN_nodes <- data.frame(
+  "id" = import_nodes$Id,
+  "label" = import_nodes$Node.label,
+  "size" = rescale(import_nodes$r, to = c(5,40))
+)
+visN_edges <- data.frame(
+  "from" = import_edges$Source,
+  "to" = import_edges$Target
+)
+chipscene_igraph <- graph.data.frame(d = visN_edges, vertices = visN_nodes)
+# V(chipscene_igraph)$name <- visN_nodes$title
+V(chipscene_igraph)$title <- import_nodes$Node.label
+```
+
+```{r, eval=F}
+invisible(
+  visN <-
+    visIgraph(
+      chipscene_igraph,
+      idToLabel = F,
+      layout = "layout.forceatlas2",
+      directed = TRUE,
+      iterations = 800,
+      randomSeed = 1
+    ) %>%
+    visOptions(highlightNearest = T)
+)
+```
+
+
+```{r, include=FALSE}
+invisible(
+  visN <-
+    visIgraph(
+      chipscene_igraph,
+      idToLabel = F,
+      layout = "layout.forceatlas2",
+      directed = TRUE,
+      iterations = 800,
+      randomSeed = 1
+    ) %>%
+    visOptions(highlightNearest = T)
+)
+```
+
+```{r}
+visN
+```
+
+
+
+

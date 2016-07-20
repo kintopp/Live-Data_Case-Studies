@@ -1,0 +1,158 @@
+---
+title: "Initial Experiments"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r libraries}
+library(xlsx)
+library(highcharter)
+library(shiny)
+library(rCharts)
+```
+
+
+# Import
+
+```{r import_data}
+## =========================== Import and Tidy Data ====================================
+## ==============================================================================
+realm_cons_import <- read.csv(file = "realms_cons.csv", stringsAsFactors = F)
+
+## Get columns which are measures (those with X[0-9] in their name)
+measure_columns <- colnames(realm_cons_import)[grepl("X[0-9]", colnames(realm_cons_import))]
+
+## Retrive all values and find uniques to correct misspellings
+all_values <- realm_cons_import[, measure_columns]
+unique_values <- unique(as.character(unlist(all_values)))
+realm_cons_import[realm_cons_import == "high"] <- "High"
+realm_cons_import[realm_cons_import == "HIgh"] <- "High"
+realm_cons_import[realm_cons_import == "low"] <- "Low"
+
+```
+
+Let's explore the measure columns for different biomes:
+
+```{r shiny}
+shinyApp(ui = fluidPage(sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        "selected_biome",
+        label = "Select Biome",
+        choices = unique(realm_cons_import$Biome)
+      )
+    ),
+    mainPanel(showOutput("biome_highchart", "highcharts"))
+  )),
+  server = function(input, output){
+    ## =========================== Tally ====================================
+    ## ==============================================================================
+    biome_data <- reactive(realm_cons_import[realm_cons_import$Biome == input$selected_biome,])
+    
+    biome_measure_df <- data.frame("Var1" = as.character(),
+                                   "Freq" = as.numeric(),
+                                   "Measure" = as.character())
+    
+    biome_measure_tallier <- function(measure) {
+      biome_data <- biome_data()
+      tallies <- as.data.frame(table(biome_data[, measure]))
+      tallies["Measure"] <- rep(measure, nrow(tallies))
+      tallies
+    }
+    
+    biome_measure_df <- reactive({invisible(lapply(measure_columns, function(x) {
+      biome_measure_df <<-
+        rbind(biome_measure_df, biome_measure_tallier(x))
+    }))
+    levels(biome_measure_df$Var1) <-
+      c("High", "Med", "Low", "Unsure", "N/A")
+    
+    biome_measure_df
+    })
+    
+    output$biome_highchart <- renderChart({
+      biome_measure_df <- biome_measure_df()
+      
+      biome_highchart <- rCharts:::Highcharts$new()
+      
+      biome_highchart$chart(type = "column",
+                            zoomType = "x")
+      a$plotOptions(column = list(stacking = "normal"))
+      biome_highchart$xAxis(categories = biome_measure_df$Measure)
+      
+      invisible(sapply(unique(biome_measure_df$Var1), function(name) {
+        d <- biome_measure_df[biome_measure_df$Var1 == name,]
+        biome_highchart$series(name = name, data = d$Freq)
+      }))
+      
+      biome_highchart
+    })
+    
+  }
+)
+```
+
+
+```{r selected_biome_highchart}
+
+
+
+
+
+
+
+
+selected_biome <- 8
+
+biome_data <- realm_cons_import[realm_cons_import$Biome == selected_biome,]
+
+## =========================== Tally ====================================
+## ==============================================================================
+biome_measure_df <- data.frame(
+  "Var1" = as.character(),
+  "Freq" = as.numeric(),
+  "Measure" = as.character()
+)
+
+biome_measure_tallier <- function(measure){
+  tallies <- as.data.frame(table(biome_data[,measure]))
+  tallies["Measure"] <- rep(measure, nrow(tallies))
+  tallies
+}
+
+invisible(lapply(measure_columns, function(x){biome_measure_df <<- rbind(biome_measure_df, biome_measure_tallier(x))}))
+levels(biome_measure_df$Var1) <- c("High","Med","Low","Unsure","N/A")
+
+## =========================== Available measures ====================================
+## ==============================================================================
+
+
+
+
+## =========================== Highchart ====================================
+## ==============================================================================
+
+biome_highchart <- rCharts:::Highcharts$new()
+
+biome_highchart$chart(type = "column",
+                      zoomType = "x")
+a$plotOptions(column = list(stacking = "normal"))
+biome_highchart$xAxis(categories = biome_measure_df$Measure)
+
+invisible(sapply(unique(biome_measure_df$Var1), function(name){
+  d <- biome_measure_df[biome_measure_df$Var1 == name, ]
+  biome_highchart$series(name = name, data = d$Freq)
+}))
+
+biome_highchart
+
+```
+
+

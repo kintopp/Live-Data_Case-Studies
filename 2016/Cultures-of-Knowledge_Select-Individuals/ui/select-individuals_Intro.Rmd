@@ -1,0 +1,18 @@
+<p>
+This module allows you to select two or three individuals, or the organizations they were involved in, and examine their relationships. You can select up to three names from the list that appears when you click in the ‘Select Individuals’ field (a type-ahead function is included). The resulting graph shows how the selected individuals and their connections are interconnected up to a maximum of three degrees of separation. The selected individuals and the edges connected to them are rendered in orange. Other people are rendered in purple, organizations in green. Below the nodes the last name of people is given; positioning the cursor over the node displays their full name. To remove an individual from the ‘Select Individuals’ field, click on his or her name and press the ‘Delete’ or ‘Backspace’ key.
+</p>
+
+<p>
+The controls on the right (that appear after you have entered at least one name) allow you to select a date (range) and/or adjust the number of degrees by which neighbours are displayed. If a selected individual is connected to the other selected individual(s) but not within the number of neighbour degrees you chose, his or her node only shows a connection to the nearest individual who links him to the other selected individual(s).
+</p>
+
+<p>
+Clicking on a node highlights the individual(s) directly connected to your selection and makes a box showing the number of unique connections appear below the graph together with a table of all events involving the selected individual. You can only select one individual at a time. You can deselect by clicking in the empty space between the nodes.
+</p>
+
+<p>
+<strong>
+Hover your cursor over the controls for more information
+</strong>
+</p>
+

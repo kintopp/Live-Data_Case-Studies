@@ -1,0 +1,125 @@
+---
+title: "WebLearn Network Visualisation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+## WebLearn Site Map
+
+This is a visualisation of a small section of Oxford University's WebLearn service, the following interactivity is provided:
+
+- Use the scroll wheel to zoom in and out of the graph
+- Select nodes to highlight first degree neighbours
+
+Note that all code is shown for reference purposes, scroll down the page for the network.
+
+```{r import_and_wrangle_data}
+# Commented out as already converted xlsx to csv
+# library(xlsx)
+# xlsx_import <- read.xlsx("concept.xlsx", sheetIndex = 1)
+# write.csv(xlsx_import, file = "xavier-data.csv", row.names = FALSE)
+
+# Import csv as faster than xlsx
+xavier_data <- read.csv("edges_11thMay.csv")
+# Drop all columns except Parent and Child
+xavier_data <- xavier_data[,c("Parent","Child")]
+xavier_data$Parent <- as.character(xavier_data$Parent)
+xavier_data$Child <- as.character(xavier_data$Child)
+
+# Find all unique nodes
+unique_nodes <- unique(c(xavier_data$Parent, xavier_data$Child))
+# Function to get the last item in the node's name
+get_name <- function(item){
+  l <- length(item)
+  item[l]
+}
+# lapply get_name to get all unique_names
+unique_names <- as.character()
+invisible(
+  lapply(strsplit(unique_nodes, "-"), function(x){
+    unique_names <<- append(x = unique_names, values = get_name(x))
+  }
+  )
+)
+unique_names <- unique(unique_names)
+```
+
+```{r generate_edges_from_names}
+## Load zoo for rollappy
+library(zoo)
+edges_df <- data.frame(
+  "from" = as.character(),
+  "to" = as.character()
+)
+create_edges_from_names <- function(name){
+  if(grepl("[-]",name)){
+    df <- as.data.frame(rollapply(unlist(strsplit(name, split = "-")), 2, by = 1, c))
+    colnames(df) <- c("from","to")
+    edges_df <<- rbind(edges_df, df)
+  } else 
+    return()
+}
+## invisibly lapply
+invisible(
+  lapply(unique_nodes, function(x){
+    create_edges_from_names(x)
+  })
+)
+# Remove duplicates
+edges_df <- edges_df[!duplicated(edges_df),]
+# Convert to characters
+edges_df$from <- as.character(edges_df$from)
+edges_df$to <- as.character(edges_df$to)
+# Remove self loops
+edges_df <- edges_df[edges_df$from != edges_df$to,]
+```
+
+```{r calculate_level_in_graph}
+library(stringr) # for counting
+highest_level <- function(node.name){
+  if(any(grepl(paste0("^",node.name), unique_nodes))){
+    1
+  } else
+    min(str_count(unique_nodes[grepl(paste0(".",node.name,"$"), unique_nodes)],"[-]"))+1
+}
+```
+
+
+```{r display_network, fig.height=5, fig.width=5}
+library(visNetwork)
+library(plyr)
+
+visN_nodes <- data.frame(
+  "id" = 1:length(unique_names),
+  "label" = unique_names,
+  "title" = unique_names,
+  "level" = unlist(lapply(unique_names, function(x){highest_level(x)}))
+)
+
+visN_edges <- data.frame(
+  "from" = mapvalues(
+    edges_df$from,
+    from = unique_names,
+    to = 1:length(unique_names)
+  ) %>% as.numeric(),
+  "to" = mapvalues(
+    edges_df$to,
+    from = unique_names,
+    to = 1:length(unique_names)
+  ) %>% as.numeric()
+)
+
+visNetwork(nodes = visN_nodes, edges = visN_edges, width = "100%", height = "700px") %>%
+  # visHierarchicalLayout() %>%
+  visOptions(highlightNearest = TRUE) %>%
+  visInteraction(hoverConnectedEdges = TRUE)
+
+```
+
